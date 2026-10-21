@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Ledger</title>
+<style>
+:root{--bg:#f2f5f4;--card:#fff;--ink:#14211f;--mute:#667774;--line:#dce4e2;--sgd:#0f6b5c;--myr:#b7791f}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1514;--card:#172120;--ink:#e8efed;--mute:#8fa09c;--line:#26332f;--sgd:#4fc3ad;--myr:#e6b04f}}
+*{box-sizing:border-box}html,body{margin:0}
+body{font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);font-variant-numeric:tabular-nums;padding-top:env(safe-area-inset-top)}
+main{max-width:760px;margin:0 auto;padding:12px 14px 160px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--sgd);outline-offset:2px}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{flex:1;padding:11px 2px;border:0;background:none;color:var(--mute);font-size:12px;line-height:1.2}
+nav button.on{color:var(--ink);font-weight:700;box-shadow:inset 0 3px var(--ink)}
+.SGD{--c:var(--sgd)}.MYR{--c:var(--myr)}
+.mnav{display:flex;align-items:center;justify-content:space-between;margin:4px 0 12px}
+.mnav h2{margin:0;font-size:20px}.mnav button{width:42px;height:42px;border:1px solid var(--line);background:var(--card);border-radius:50%;font-size:22px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+.col,.card{background:var(--card);border-top:4px solid var(--c);border-radius:6px;overflow:hidden}
+.col header{display:flex;flex-direction:column;padding:10px 10px 8px;border-bottom:1px solid var(--line)}
+.col header b{font-size:13px;color:var(--c)}.col header span{font-size:22px;font-weight:700}
+.row{display:grid;grid-template-columns:22px 1fr auto;gap:6px;width:100%;text-align:left;padding:9px 10px;border:0;border-bottom:1px solid var(--line);background:none;align-items:center}
+.row i{font-style:normal;color:var(--mute);font-size:13px}.row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row small{display:block;color:var(--mute);font-size:12px}.row em{font-style:normal;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:4px}
+.empty{color:var(--mute);padding:14px 10px;margin:0;font-size:14px}
+.fab{position:fixed;right:16px;bottom:calc(64px + env(safe-area-inset-bottom));padding:14px 20px;border:0;border-radius:28px;background:var(--ink);color:var(--bg);font-weight:700;box-shadow:0 4px 14px #0004;z-index:4}
+.seg{display:flex;gap:6px;margin:0 0 12px}.seg label{flex:1;position:relative;margin:0}.seg input{position:absolute;opacity:0}
+.seg span{display:block;text-align:center;padding:10px;border:1px solid var(--line);border-radius:6px;cursor:pointer}
+.seg input:checked+span{background:var(--ink);color:var(--bg);border-color:var(--ink)}.seg input:focus-visible+span{outline:2px solid var(--sgd);outline-offset:2px}
+.card{padding:14px;margin-bottom:12px}.card h3{margin:0 0 6px;color:var(--c);font-size:14px}
+.big{font-size:28px;font-weight:700}.mute{color:var(--mute);font-size:14px}
+.rep{display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:center;margin:12px 0}
+.donut{width:120px;height:120px;transform:rotate(0)}ul.lg{list-style:none;margin:0;padding:0;font-size:14px}
+.lg li{display:grid;grid-template-columns:12px 1fr auto 40px;gap:6px;align-items:center;padding:2px 0}.lg i{width:10px;height:10px;border-radius:2px}.lg small{color:var(--mute);text-align:right}
+.bars{display:flex;gap:2px;align-items:flex-end;height:110px;margin-top:8px}
+.bars div{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;min-width:0}
+.bars u{display:block;width:100%;min-height:1px;border-radius:2px 2px 0 0}.bars small{font-size:10px;color:var(--mute);height:14px;white-space:nowrap}
+label{display:block;font-size:14px;color:var(--mute);margin-bottom:10px}
+input:not([type=radio]),select,textarea{display:block;width:100%;padding:10px;margin-top:4px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-size:16px}
+dialog{border:0;border-radius:10px;padding:20px;width:min(92vw,400px);background:var(--card);color:var(--ink)}dialog::backdrop{background:#0008}
+dialog h3{margin:0 0 14px}.act{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.act button,.btn{padding:10px 16px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+.pri{background:var(--ink)!important;color:var(--bg)!important;border-color:var(--ink)!important;font-weight:700}.del{margin-right:auto;color:#c0392b}
+.rr{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--card);border-left:4px solid var(--c);border-radius:6px;margin-bottom:8px}
+.rr .mid{flex:1;min-width:0;text-align:left;border:0;background:none;padding:0}.rr .mid small{display:block;color:var(--mute)}
+.rr.off{opacity:.55}.note{border:1px dashed var(--line);border-radius:6px;padding:12px;color:var(--mute);font-size:14px}
+h2.s{font-size:16px;margin:20px 0 8px}.btns{display:flex;gap:8px;flex-wrap:wrap}
+@media(min-width:820px){
+nav{top:0;bottom:auto;right:auto;width:170px;height:100%;flex-direction:column;justify-content:flex-start;border-top:0;border-right:1px solid var(--line);padding-top:28px}
+nav button{text-align:left;padding:12px 20px;flex:none;font-size:15px}nav button.on{box-shadow:inset 3px 0 var(--ink)}
+main{margin:0 auto 0 170px;max-width:900px;padding:24px 32px 100px}.fab{bottom:24px}}
+dialog{max-height:90vh;overflow:auto}#lk{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center}#lk[hidden]{display:none}
+#lk form{width:min(86vw,320px);display:grid;gap:12px;text-align:center}.btn.pri{padding:10px 16px}small.g{display:block;font-size:12px}.pos{color:var(--sgd)}.neg{color:#c0392b}
+</style></head><body>
+<main id="m"></main>
+<nav><button data-v="exp">Expenses</button><button data-v="mon">Savings/<wbr>Invest</button><button data-v="rep">Reports</button><button data-v="rec">Recurring</button><button data-v="set">Settings</button></nav>
+<dialog id="dlg"><form></form></dialog>
+<script>
+const $=s=>document.querySelector(s),K='ledger.v1';
+const DEF=['Food','Transport','Groceries','Rent','Bills','Subscription','Insurance','Shopping','Health','Charity','Fun','Other'];
+let S;try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
+S=S||{e:[],r:[],cats:[...DEF],cur:'SGD'};
+S.h=S.h||[];S.sv=S.sv||[];
+let KY={};try{KY=JSON.parse(localStorage.getItem('ledger.keys'))||{}}catch(e){}
+const saveKY=()=>{try{localStorage.setItem('ledger.keys',JSON.stringify(KY))}catch(e){}};
+const DR=`Insurance: insurance, takaful, aia, prudential, great eastern
+Subscription: subscription, subscribe, premium, netflix, youtube, spotify, disney, hbo, claude, chatgpt, openai, gemini, google one, google cloud, icloud, apple music, adobe, microsoft 365, office 365, dropbox, notion, canva, vpn, patreon, prime video
+Charity: charity, donation, donate, zakat, tithe, sedekah, church, temple
+Rent: rent, rental, sewa
+Bills: utilities, electric, internet, wifi, singtel, starhub, unifi, maxis, celcom, tnb`;
+if(!S.rules)S.rules=DR;
+const ensureCat=c=>{if(!S.cats.includes(c))S.cats.push(c);return c};
+const rulesP=()=>S.rules.split('\n').map(l=>{const i=l.indexOf(':');return i<1?null:[l.slice(0,i).trim(),l.slice(i+1).split(',').map(k=>k.trim().toLowerCase()).filter(Boolean)]}).filter(r=>r&&r[0]&&r[1].length);
+function classify(t){t=(t||'').toLowerCase();for(const[c,ks]of rulesP())for(const k of ks)if(new RegExp('(^|[^a-z0-9])'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(t))return c;return null}
+const resolve=(c,name)=>ensureCat(c||classify(name)||'Other');
+rulesP().forEach(r=>ensureCat(r[0]));
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){toast('Could not save. Storage is full or blocked in this browser.')}queueSync()};
+const now=()=>Date.now(),uid=()=>Math.random().toString(36).slice(2,10)+now().toString(36);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0'),ym=d=>d.slice(0,7);
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const fm=n=>n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const sum=l=>l.reduce((s,x)=>s+x.amt,0),live=()=>S.e.filter(x=>!x.del);
+const PAL=['#2a9d8f','#e9a23b','#5b7fd1','#d1604d','#8e6bbf','#4aa96c','#c2679b','#7a8a86'];
+let view='exp',cur=ym(today()),rmode='m';
+function shift(m,k){let[y,o]=m.split('-').map(Number);o+=k;while(o>12){o-=12;y++}while(o<1){o+=12;y--}return y+'-'+pad(o)}
+
+// Recurring items: one fixed id per item per month, so a month can never be added twice
+function genRecurring(){const t=ym(today());let ch=false;
+ S.r.filter(r=>!r.del&&!r.paused).forEach(r=>{for(let m=r.start;m<=t;m=shift(m,1)){
+  const id='r:'+r.id+':'+m;if(S.e.some(x=>x.id===id))continue;
+  const[y,o]=m.split('-').map(Number),dim=new Date(y,o,0).getDate();
+  S.e.push({id,date:m+'-'+pad(Math.min(r.day,dim)),amt:r.amt,cur:r.cur,cat:r.cat,note:r.name,auto:1,u:now()});ch=true}});
+ if(ch)save()}
+
+function mnav(){const yr=view==='rep'&&rmode==='y';
+ return `<div class=mnav><button data-act=prev aria-label="Previous">‹</button><h2>${yr?cur.slice(0,4):MN[+cur.slice(5)-1]+' '+cur.slice(0,4)}</h2><button data-act=next aria-label="Next">›</button></div>`}
+const row=x=>`<button class=row data-act=edit data-id="${x.id}"><i>${+x.date.slice(8)}</i><span>${esc(x.note||x.cat)}${x.auto?'<em>auto</em>':''}<small>${esc(x.cat)}</small></span><b>${fm(x.amt)}</b></button>`;
+function vExp(){
+ const L=live().filter(x=>ym(x.date)===cur).sort((a,b)=>b.date.localeCompare(a.date)||b.u-a.u);
+ const col=c=>{const l=L.filter(x=>x.cur===c);
+  return `<section class="col ${c}"><header><b>${c}</b><span>${fm(sum(l))}</span></header>${l.length?l.map(row).join(''):'<p class=empty>No spending yet</p>'}</section>`};
+ return mnav()+`<div class=cols>${col('SGD')}${col('MYR')}</div><button class=fab data-act=add>+ Add expense</button>`}
+
+function donut(d,t){let o=25;return `<svg viewBox="0 0 42 42" class=donut role=img aria-label="Spending by category">`+
+ d.map(([k,v],i)=>{const p=v/t*100,s=`<circle r=15.9155 cx=21 cy=21 fill=none stroke="${PAL[i%8]}" stroke-width=6 stroke-dasharray="${p} ${100-p}" stroke-dashoffset="${o}"/>`;o-=p;return s}).join('')+`</svg>`}
+const legend=(d,t)=>`<ul class=lg>${d.map(([k,v],i)=>`<li><i style="background:${PAL[i%8]}"></i><span>${esc(k)}</span><b>${fm(v)}</b><small>${Math.round(v/t*100)}%</small></li>`).join('')}</ul>`;
+function bars(v,lab,color,step){const mx=Math.max(...v,0);
+ return `<div class=bars>${v.map((x,i)=>`<div title="${lab[i]}: ${fm(x)}"><u style="height:${mx?x/mx*88:0}%;background:${color}"></u><small>${i%step===0?lab[i]:''}</small></div>`).join('')}</div>`}
+const cats=l=>{const m={};l.forEach(x=>m[x.cat]=(m[x.cat]||0)+x.amt);return Object.entries(m).sort((a,b)=>b[1]-a[1])};
+const colr=c=>c==='SGD'?'var(--sgd)':'var(--myr)';
+
+function repBlock(c){
+ const y=cur.slice(0,4),isY=rmode==='y',A=live().filter(x=>x.cur===c);
+ const l=A.filter(x=>isY?x.date.slice(0,4)===y:ym(x.date)===cur),t=sum(l);
+ const head=`<section class="card ${c}"><h3>${c}</h3>`;
+ if(!l.length)return head+`<p class=empty style="padding:0">No ${c} spending ${isY?'this year':'this month'}.</p></section>`;
+ const d=cats(l);let extra='',trend='';
+ if(isY){const mv=Array.from({length:12},(_,i)=>sum(A.filter(x=>ym(x.date)===y+'-'+pad(i+1))));
+  const n=mv.filter(Boolean).length,hi=mv.indexOf(Math.max(...mv));
+  extra=`<div class=mute>Average ${fm(t/n)} per month. Highest: ${MN[hi]} (${fm(mv[hi])})</div>`;
+  trend=bars(mv,MN.map(s=>s.slice(0,3)),colr(c),1)}
+ else{const p=sum(A.filter(x=>ym(x.date)===shift(cur,-1)));
+  extra=`<div class=mute>${p?(t>=p?'+':'')+((t-p)/p*100).toFixed(0)+'% vs last month ('+fm(p)+')':'No spending last month to compare'}</div>`;
+  const dim=new Date(+y,+cur.slice(5),0).getDate();
+  trend=bars(Array.from({length:dim},(_,i)=>sum(l.filter(x=>+x.date.slice(8)===i+1))),Array.from({length:dim},(_,i)=>i+1),colr(c),5)}
+ return head+`<div class=big>${fm(t)}</div>${extra}<div class=rep>${donut(d,t)}${legend(d,t)}</div><div class=mute>${isY?'By month':'By day'}</div>${trend}</section>`}
+function vRep(){return `<div class=seg style="max-width:260px;margin-bottom:12px"><label><input type=radio name=rm data-act=rmode value=m ${rmode==='m'?'checked':''}><span>Month</span></label><label><input type=radio name=rm data-act=rmode value=y ${rmode==='y'?'checked':''}><span>Year</span></label></div>`+mnav()+repBlock('SGD')+repBlock('MYR')}
+
+function vRec(){const R=S.r.filter(r=>!r.del);
+ return `<h2 class=s style="margin-top:4px">Monthly repeated expenses</h2><p class=mute>Each one is added to Expenses on its day every month. Changes apply to future months only.</p>`+
+ (R.length?R.map(r=>`<div class="rr ${r.cur}${r.paused?' off':''}"><button class=mid data-act=redit data-id="${r.id}">${esc(r.name)}<small>${r.cur} ${fm(r.amt)} on day ${r.day}, ${esc(r.cat)}${r.paused?' (paused)':''}</small></button><button class=btn data-act=rpause data-id="${r.id}">${r.paused?'Resume':'Pause'}</button></div>`).join(''):'<p class=empty>Nothing yet. Add your rent, donations and subscriptions.</p>')+
+ `<button class=fab data-act=radd>+ Add recurring</button>`}
+
+function vSet(){return `<h2 class=s style="margin-top:4px">Backup</h2><p class=mute>Your data lives only in this browser on this device. Export a backup regularly until Drive sync is added.</p>
+<div class=btns><button class=btn data-act=exp>Export backup (JSON)</button><button class=btn data-act=csv>Export CSV</button><label class=btn style="margin:0;color:var(--ink)">Import backup<input type=file accept=".json" id=imp hidden></label></div>
+<h2 class=s>Categories</h2><label>Separate with commas<textarea id=cats rows=3>${esc(S.cats.join(', '))}</textarea></label><button class=btn data-act=savecats>Save categories</button>
+<h2 class=s>Auto-sorting rules</h2><p class=mute>One rule per line as Category: keyword, keyword. The first matching rule wins. Used for recurring items and any expense set to Auto-detect.</p><label><textarea id=rules rows=8>${esc(S.rules)}</textarea></label><div class=btns><button class=btn data-act=saverules>Save rules</button><button class=btn data-act=resort>Re-sort entries filed as Other</button></div>
+<h2 class=s>Prices</h2><p class=mute>Stock and gold prices come from Twelve Data (free key). Only symbols are sent, never your quantities or balances. Gold uses XAU/USD converted to your currency per gram. The key stays on this device and is left out of backups.</p><label>Twelve Data API key<input id=tdk type=password autocomplete=off value="${esc(KY.td||'')}"></label><label>Auto-refresh when you open the app<select id=pf>${[['manual','Manual only'],['daily','Daily'],['weekly','Weekly'],['monthly','Monthly']].map(([v,t])=>`<option value=${v} ${(KY.pf||'manual')===v?'selected':''}>${t}</option>`).join('')}</select></label><button class=btn data-act=savepx>Save price settings</button>
+<h2 class=s>App lock</h2><p class=mute>Asks for a PIN when you open the app or come back after a minute. It keeps casual snoopers out. It does not encrypt the data yet; encryption arrives with Drive sync.</p><label>${KY.lock?'Change PIN (4 to 8 digits)':'New PIN (4 to 8 digits)'}<input id=pin type=password inputmode=numeric autocomplete=off></label><div class=btns><button class=btn data-act=setpin>${KY.lock?'Change PIN':'Turn on lock'}</button>${KY.lock?'<button class=btn data-act=rmpin>Turn off lock</button>':''}</div>
+<h2 class=s>Google Drive sync</h2><p class=mute>Your data is encrypted on this device with your passphrase, then saved in a folder named "Ledger Backup" in your own Google Drive. Google only sees scrambled text. If you forget the passphrase the backup cannot be recovered, and use the same passphrase on every device. The app must be opened from an https address for this to work.</p><label>Google OAuth client ID<input id=cid autocomplete=off value="${esc(KY.cid||'')}"></label><label>Encryption passphrase (8 or more characters)<input id=pw type=password autocomplete=off value="${esc(KY.pw||'')}"></label><div class=btns><button class=btn data-act=svsave>Save and turn on</button><button class=btn data-act=sync>Sync now</button>${KY.sync?'<button class=btn data-act=svoff>Turn off</button>':''}</div><p class=mute id=sst>${esc(KY.err?'Sync problem: '+KY.err:KY.syn?'Last synced '+new Date(KY.syn).toLocaleString():KY.sync?'Not synced yet':'Sync is off')}</p>
+<h2 class=s>Coming next</h2><div class=note>The optional Gemini/Claude analysis switch.</div>
+<h2 class=s>Danger zone</h2><button class="btn del" style="margin:0" data-act=wipe>Erase all data on this device</button>`}
+
+function toast(t){let d=$('#toast');if(!d){d=document.createElement('div');d.id='toast';d.setAttribute('role','status');
+ d.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:99;max-width:90vw';document.body.appendChild(d)}
+ d.textContent=t;d.hidden=false;clearTimeout(d.t);d.t=setTimeout(()=>d.hidden=true,3500+t.length*50)}
+function openDlg(title,body,onSave,onDel){const f=$('#dlg form');let armed=0;
+ f.innerHTML=`<h3>${title}</h3>${body}<div class=act>${onDel?'<button type=button class=del data-x=d>Delete</button>':''}<button type=button data-x=c>Cancel</button><button type=button class=pri data-x=s>Save</button></div>`;
+ const go=()=>{if(!f.reportValidity())return;onSave(new FormData(f));$('#dlg').close()};
+ f.onsubmit=e=>{e.preventDefault();go()};
+ f.onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;const x=b.dataset.x;
+  if(x==='c')$('#dlg').close();else if(x==='s')go();
+  else if(x==='d'){if(!armed){armed=1;b.textContent='Tap again to delete';return}onDel();$('#dlg').close()}};
+ $('#dlg').showModal()}
+const curSeg=v=>`<div class=seg>${['SGD','MYR'].map(c=>`<label><input type=radio name=cur value=${c} ${v===c?'checked':''}><span>${c}</span></label>`).join('')}</div>`;
+const catSel=v=>`<label>Category<select name=cat><option value="" ${v?'':'selected'}>Auto-detect from name</option>${(!v||S.cats.includes(v)?S.cats:[...S.cats,v]).map(c=>`<option ${c===v?'selected':''}>${esc(c)}</option>`).join('')}</select></label><div class=mute id=hint style="margin:-4px 0 10px"></div>`;
+function hint(){const f=$('#dlg form'),h=$('#hint'),n=f.elements.namedItem('note')||f.elements.namedItem('name'),c=f.elements.namedItem('cat');const u=()=>{h.textContent=c.value?'':'Will be filed as: '+(classify(n.value)||'Other')};f.oninput=u;u()}
+
+function expForm(id){const x=id?S.e.find(e=>e.id===id):{date:today(),cur:S.cur,cat:'',amt:'',note:''};
+ openDlg(id?'Edit expense':'Add expense',curSeg(x.cur)+
+ `<label>Amount<input name=amt type=number step=0.01 min=0.01 inputmode=decimal required value="${x.amt}"></label>`+catSel(x.cat)+
+ `<label>Date<input name=date type=date required value="${x.date}"></label><label>Note<input name=note maxlength=80 value="${esc(x.note)}"></label>`,
+ f=>{const o={amt:+f.get('amt'),cur:f.get('cur'),cat:resolve(f.get('cat'),f.get('note')),date:f.get('date'),note:f.get('note').trim(),u:now()};
+  if(!(o.amt>0))return;S.cur=o.cur;
+  if(id)Object.assign(x,o);else S.e.push({id:uid(),...o});
+  cur=ym(o.date);save();render()},
+ id?()=>{x.del=1;x.u=now();save();render()}:null);hint()}
+function recForm(id){const r=id?S.r.find(e=>e.id===id):{name:'',amt:'',cur:'SGD',cat:'',day:1};
+ openDlg(id?'Edit recurring':'Add recurring',`<label>Name<input name=name required maxlength=50 value="${esc(r.name)}" placeholder="Rent, charity donation"></label>`+curSeg(r.cur)+
+ `<label>Amount<input name=amt type=number step=0.01 min=0.01 inputmode=decimal required value="${r.amt}"></label>`+catSel(r.cat)+
+ `<label>Day of month (1 to 31)<input name=day type=number min=1 max=31 required value="${r.day}"></label>`,
+ f=>{const o={name:f.get('name').trim(),amt:+f.get('amt'),cur:f.get('cur'),cat:resolve(f.get('cat'),f.get('name')),day:Math.min(31,Math.max(1,+f.get('day')||1)),u:now()};
+  if(!(o.amt>0))return;
+  if(id)Object.assign(r,o);else S.r.push({id:uid(),...o,start:ym(today()),paused:0});
+  genRecurring();save();render()},
+ id?()=>{r.del=1;r.u=now();save();render()}:null);hint()}
+
+function dl(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function merge(inc,q){let n=0;['e','r','h','sv'].forEach(k=>(inc[k]||[]).forEach(x=>{if(!x||!x.id)return;const m=S[k].find(y=>y.id===x.id);
+ if(!m){S[k].push(x);n++}else if((x.u||0)>(m.u||0)){Object.assign(m,x);n++}}));
+ if(Array.isArray(inc.cats))S.cats=[...new Set([...S.cats,...inc.cats])];if(q){if(n)save();return n}save();render();toast('Imported. '+n+' records added or updated.')}
+
+
+// ---- Money: investments and savings ----
+const hv=h=>h.qty*(h.price||0),dstr=t=>new Date(t).toLocaleDateString();
+function vMon(){const T='<h2 class=s style="margin-top:4px">Savings/Investment</h2>';const H=S.h.filter(x=>!x.del),V=S.sv.filter(x=>!x.del);
+ const blk=c=>{const hs=H.filter(x=>x.cur===c),vs=V.filter(x=>x.cur===c);if(!hs.length&&!vs.length)return '';
+  const ht=hs.reduce((a,x)=>a+hv(x),0),st=sum(vs),t=ht+st,d=[...hs.map(x=>[x.name,hv(x)]),...vs.map(x=>[x.name,x.amt])].filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+  const hr=x=>{const g=x.cost>0&&x.price?(x.price-x.cost)*x.qty:null;return `<button class=row data-act=hedit data-id="${x.id}"><i></i><span>${esc(x.name)}<small>${x.qty} x ${x.price?fm(x.price):'no price'}${x.upd?', '+dstr(x.upd):''}</small></span><b>${fm(hv(x))}${g===null?'':`<small class="g ${g>=0?'pos':'neg'}">${g>=0?'+':''}${fm(g)}</small>`}</b></button>`};
+  return `<section class="card ${c}"><h3>${c} net worth</h3><div class=big>${fm(t)}</div><div class=mute>Investments ${fm(ht)}, savings ${fm(st)}</div>${t>0?`<div class=rep>${donut(d,t)}${legend(d,t)}</div>`:''}${hs.map(hr).join('')}${vs.map(x=>`<button class=row data-act=sedit data-id="${x.id}"><i></i><span>${esc(x.name)}<small>Savings</small></span><b>${fm(x.amt)}</b></button>`).join('')}</section>`};
+ return T+`<div class=btns style="margin-bottom:12px"><button class="btn pri" data-act=refresh>Refresh prices</button><button class=btn data-act=hadd>+ Holding</button><button class=btn data-act=sadd>+ Savings</button></div><p class=mute>Prices last refreshed: ${KY.last?new Date(KY.last).toLocaleString():'never'}</p>`+(blk('SGD')+blk('MYR')||'<p class=empty>Add your stocks, gold and bank savings to see your net worth.</p>')}
+let lastT=0;
+async function td(sym,ex){const w=7600-(now()-lastT);if(w>0)await new Promise(r=>setTimeout(r,w));lastT=now();
+ const r=await fetch('https://api.twelvedata.com/price?symbol='+encodeURIComponent(sym)+(ex?'&exchange='+encodeURIComponent(ex):'')+'&apikey='+encodeURIComponent(KY.td));const j=await r.json();if(!(+j.price>0))throw new Error(j.message||'no price');return +j.price}
+let busy=0;
+async function refresh(){if(!KY.td){toast('Add your Twelve Data key in Settings first.');return}if(busy)return;busy=1;
+ const L=S.h.filter(x=>!x.del&&(x.sym||x.type==='gold'||x.type==='silver'));toast('Refreshing '+L.length+' holdings. The free plan allows about 8 requests a minute, so this can take a while.');
+ const ca={},q=async(a,b)=>ca[a+b]??(ca[a+b]=await td(a,b)),fx=c=>q('USD/'+c),G=31.1035;let ok=0,bad=[];
+ for(const h of L){try{let p;
+  if(h.type==='gold'||h.type==='silver')p=await q(h.type==='gold'?'XAU/USD':'XAG/USD')*await fx(h.cur)/G;
+  else if(h.type==='crypto')p=await q(h.sym.includes('/')?h.sym:h.sym+'/USD')*await fx(h.cur);
+  else{p=await q(h.sym,h.ex);if(h.usd==='1')p*=await fx(h.cur)}
+  h.price=+p.toFixed(4);h.upd=now();h.u=now();ok++}catch(e){bad.push(h.name+' ['+String(e.message||e).slice(0,140)+']')}}
+ busy=0;KY.last=now();saveKY();save();render();toast(ok+' updated'+(bad.length?'. Failed: '+bad.join('; ')+'. You can enter those prices by hand':'')+'.')}
+function autoRefresh(){const iv={daily:864e5,weekly:6048e5,monthly:2592e6}[KY.pf];if(iv&&KY.td&&now()-(KY.last||0)>iv)refresh()}
+function holdForm(id){const h=id?S.h.find(e=>e.id===id):{type:'stock',name:'',sym:'',ex:'',cur:'SGD',qty:'',cost:'',price:''};
+ openDlg(id?'Edit holding':'Add holding',`<label>Type<select name=type>${[['stock','Stock or ETF'],['crypto','Crypto'],['gold','Gold (grams)'],['silver','Silver (grams)'],['other','Other']].map(([v,t])=>`<option value=${v} ${h.type===v?'selected':''}>${t}</option>`).join('')}</select></label><label>Name<input name=name required maxlength=40 value="${esc(h.name)}"></label>`+curSeg(h.cur)+
+ `<label>Quantity (grams for gold and silver, coins for crypto)<input name=qty type=number step=any min=0 required value="${h.qty}"></label><label>Symbol (stocks and crypto)<input name=sym value="${esc(h.sym)}" placeholder="AAPL, or BTC for crypto"></label><label>Exchange (optional)<input name=ex value="${esc(h.ex)}" placeholder="SGX or XKLS"></label><label>Price quoted in<select name=usd><option value="">Same as holding currency</option><option value="1" ${h.usd==='1'?'selected':''}>US dollars (convert for me)</option></select></label><label>Average cost per unit (optional)<input name=cost type=number step=any min=0 value="${h.cost||''}"></label><label>Current price per unit (type it, or refresh)<input name=price type=number step=any min=0 value="${h.price||''}"></label>`,
+ f=>{const o={type:f.get('type'),name:f.get('name').trim(),cur:f.get('cur'),qty:+f.get('qty'),sym:f.get('sym').trim(),ex:f.get('ex').trim(),usd:f.get('usd'),cost:+f.get('cost')||0,price:+f.get('price')||0,u:now()};
+  if(o.price&&o.price!==h.price)o.upd=now();if(id)Object.assign(h,o);else S.h.push({id:uid(),...o});save();render()},
+ id?()=>{h.del=1;h.u=now();save();render()}:null)}
+function savForm(id){const v=id?S.sv.find(e=>e.id===id):{name:'',cur:'SGD',amt:''};
+ openDlg(id?'Edit savings':'Add savings',`<label>Account name<input name=name required maxlength=40 value="${esc(v.name)}" placeholder="DBS savings, Maybank FD"></label>`+curSeg(v.cur)+`<label>Balance<input name=amt type=number step=0.01 min=0 required value="${v.amt}"></label>`,
+ f=>{const o={name:f.get('name').trim(),cur:f.get('cur'),amt:+f.get('amt'),u:now()};if(id)Object.assign(v,o);else S.sv.push({id:uid(),...o});save();render()},
+ id?()=>{v.del=1;v.u=now();save();render()}:null)}
+
+// ---- Google Drive sync (encrypted) ----
+let syncing=0,qt,tok=null,tokExp=0,gis;
+const B=a=>{let t='';new Uint8Array(a).forEach(b=>t+=String.fromCharCode(b));return btoa(t)},U=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
+async function ck(salt){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(KY.pw),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},k,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+async function enc(t){const sl=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));return JSON.stringify({v:1,s:B(sl),i:B(iv),c:B(await crypto.subtle.encrypt({name:'AES-GCM',iv},await ck(sl),new TextEncoder().encode(t)))})}
+async function dec(t){const o=JSON.parse(t);try{return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:U(o.i)},await ck(U(o.s)),U(o.c))))}catch(e){throw new Error('Wrong passphrase for the backup already in Drive')}}
+const loadGIS=()=>gis||(gis=new Promise((res,rej)=>{if(window.google&&google.accounts)return res();const sc=document.createElement('script');sc.src='https://accounts.google.com/gsi/client';sc.onload=res;sc.onerror=()=>{gis=0;rej(new Error('Could not load Google sign-in'))};document.head.appendChild(sc)}));
+const okTok=()=>tok&&now()<tokExp;
+async function token(inter){if(okTok())return;if(!inter)throw new Error('Sign-in needed. Tap Sync now.');await loadGIS();
+ return new Promise((res,rej)=>google.accounts.oauth2.initTokenClient({client_id:KY.cid,scope:'https://www.googleapis.com/auth/drive.file',
+  callback:r=>{if(r.error)return rej(new Error(r.error));tok=r.access_token;tokExp=now()+(r.expires_in-60)*1000;res()},error_callback:e=>rej(new Error(e.type||'Sign-in cancelled'))}).requestAccessToken())}
+const gf=async(u,o={})=>{const r=await fetch(u,{...o,headers:{Authorization:'Bearer '+tok,...(o.headers||{})}});if(!r.ok)throw new Error('Drive error '+r.status);return r};
+async function fnd(name,parent,mime){const q="name='"+name+"' and trashed=false"+(parent?" and '"+parent+"' in parents":'')+(mime?" and mimeType='"+mime+"'":'');
+ return((await(await gf('https://www.googleapis.com/drive/v3/files?fields=files(id)&q='+encodeURIComponent(q))).json()).files[0]||{}).id}
+async function mkf(name,parent,mime){return(await(await gf('https://www.googleapis.com/drive/v3/files?fields=id',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:mime||'application/json',parents:parent?[parent]:undefined})})).json()).id}
+async function fileId(name){const F='application/vnd.google-apps.folder';if(!KY.dir){KY.dir=await fnd('Ledger Backup',0,F)||await mkf('Ledger Backup',0,F);saveKY()}return await fnd(name,KY.dir)||await mkf(name,KY.dir)}
+const put=(id,t)=>gf('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',{method:'PATCH',headers:{'Content-Type':'application/json'},body:t});
+const st=t=>{const e=$('#sst');if(e)e.textContent=t};
+function queueSync(){clearTimeout(qt);if(KY.sync&&!syncing&&!locked)qt=setTimeout(()=>sync(0),5000)}
+async function sync(inter){if(!KY.sync||syncing)return;syncing=1;
+ try{if(!/^https?:$/.test(location.protocol))throw new Error('Drive sync needs the app opened from an https address, not a file on your computer');
+  if(!(window.crypto&&crypto.subtle))throw new Error('Needs a secure (https) page');
+  st('Syncing...');await token(inter);
+  const f=await fileId('ledger-data.enc.json'),t=await(await gf('https://www.googleapis.com/drive/v3/files/'+f+'?alt=media')).text();
+  let n=0;if(t.trim())n=merge(await dec(t),1);
+  const out=await enc(JSON.stringify(S));await put(f,out);
+  const m=ym(today());if(KY.snap!==m){await put(await fileId('ledger-'+m+'.enc.json'),out);KY.snap=m}
+  KY.syn=now();KY.err='';saveKY();st('Last synced '+new Date(KY.syn).toLocaleString());if(view!=='set')render()}
+ catch(e){KY.err=e.message;saveKY();st('Sync problem: '+e.message);if(inter)toast('Sync problem: '+e.message)}
+ syncing=0}
+const bn=()=>KY.sync&&!okTok()&&/^https?:$/.test(location.protocol)?'<div class=note style="margin-bottom:12px">Drive sync is waiting for sign-in. <button class=btn data-act=sync>Sync now</button></div>':'';
+
+// ---- App lock ----
+let locked=false,hidAt=0;
+async function hp(pin,salt){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveBits']);const b=await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},k,256);return btoa(String.fromCharCode(...new Uint8Array(b)))}
+async function setPin(){const p=$('#pin').value;if(!/^\d{4,8}$/.test(p)){toast('PIN must be 4 to 8 digits.');return}
+ if(!(window.crypto&&crypto.subtle)){toast('The lock needs a secure (https) page.');return}
+ const s=crypto.getRandomValues(new Uint8Array(16));KY.lock={s:btoa(String.fromCharCode(...s)),h:await hp(p,s)};saveKY();render();toast('PIN set.')}
+function lock(){if(!KY.lock||locked&&!$('#lk').hidden)return;locked=true;let o=$('#lk');if(!o){o=document.createElement('div');o.id='lk';document.body.appendChild(o)}
+ o.innerHTML='<form><h2>Ledger is locked</h2><input id=lp type=password inputmode=numeric autocomplete=off placeholder="PIN" aria-label="PIN"><button class="btn pri">Unlock</button><div class=mute id=le></div></form>';o.hidden=false;$('#m').innerHTML='';
+ o.querySelector('form').onsubmit=async e=>{e.preventDefault();const sl=Uint8Array.from(atob(KY.lock.s),c=>c.charCodeAt(0));
+  if(await hp($('#lp').value,sl)===KY.lock.h){locked=false;o.hidden=true;render();autoRefresh();sync(0)}else{$('#le').textContent='Wrong PIN.';$('#lp').value=''}};
+ setTimeout(()=>$('#lp').focus(),50)}
+function render(){if(locked)return;$('#m').innerHTML=bn()+{exp:vExp,mon:vMon,rep:vRep,rec:vRec,set:vSet}[view]();
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));
+ const i=$('#imp');if(i)i.onchange=async()=>{try{merge(JSON.parse(await i.files[0].text()))}catch(e){toast('That file is not a valid Ledger backup.')}}}
+
+document.addEventListener('click',e=>{
+ const n=e.target.closest('nav button');if(n){view=n.dataset.v;render();return}
+ const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,id=b.dataset.id;
+ const step=view==='rep'&&rmode==='y'?12:1;
+ if(a==='prev'){cur=shift(cur,-step);render()}else if(a==='next'){cur=shift(cur,step);render()}
+ else if(a==='add')expForm();else if(a==='edit')expForm(id);else if(a==='radd')recForm();else if(a==='redit')recForm(id);
+ else if(a==='rmode'){rmode=b.value;render()}
+ else if(a==='rpause'){const r=S.r.find(x=>x.id===id);r.paused=r.paused?0:1;if(!r.paused)r.start=ym(today());r.u=now();genRecurring();save();render()}
+ else if(a==='exp')dl('ledger-backup-'+today()+'.json',JSON.stringify(S),'application/json');
+ else if(a==='csv')dl('ledger-'+today()+'.csv','date,currency,amount,category,note,auto\n'+live().sort((x,y)=>x.date.localeCompare(y.date)).map(x=>[x.date,x.cur,x.amt,x.cat,'"'+(x.note||'').replace(/"/g,'""')+'"',x.auto?1:0].join(',')).join('\n'),'text/csv');
+ else if(a==='refresh')refresh();else if(a==='hadd')holdForm();else if(a==='hedit')holdForm(id);else if(a==='sadd')savForm();else if(a==='sedit')savForm(id);
+ else if(a==='savepx'){KY.td=$('#tdk').value.trim();KY.pf=$('#pf').value;saveKY();toast('Price settings saved.')}
+ else if(a==='setpin')setPin();else if(a==='rmpin'){delete KY.lock;saveKY();render();toast('Lock turned off.')}
+ else if(a==='sync')sync(1);
+ else if(a==='svsave'){const c=$('#cid').value.trim(),w=$('#pw').value;if(!c||w.length<8){toast('Enter the client ID and a passphrase of 8 or more characters.');return}KY.cid=c;KY.pw=w;KY.sync=1;saveKY();loadGIS().catch(()=>{});render();toast('Saved. Tap Sync now to sign in to Google.')}
+ else if(a==='svoff'){KY.sync=0;saveKY();render();toast('Drive sync turned off. Your Drive copy is untouched.')}
+ else if(a==='saverules'){S.rules=$('#rules').value;rulesP().forEach(r=>ensureCat(r[0]));save();toast('Rules saved.')}
+ else if(a==='resort'){let n=0;[...S.e.filter(x=>!x.del),...S.r.filter(x=>!x.del)].forEach(x=>{if(x.cat!=='Other')return;const c=classify(x.note||x.name);if(c){x.cat=ensureCat(c);x.u=now();n++}});save();render();toast(n+' entries re-sorted.')}
+ else if(a==='savecats'){const c=[...new Set($('#cats').value.split(',').map(s=>s.trim()).filter(Boolean))];if(c.length){S.cats=c;save();toast('Categories saved.')}}
+ else if(a==='wipe'){if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Tap again to erase everything';return}S={e:[],r:[],h:[],sv:[],cats:[...DEF],cur:'SGD',rules:DR};save();render();toast('All data erased.')}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){hidAt=now();sync(0);return}if(KY.lock&&now()-hidAt>6e4)lock();else{genRecurring();render();autoRefresh();sync(0)}});
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+genRecurring();if(KY.sync)loadGIS().catch(()=>{});if(KY.lock)lock();else{render();autoRefresh();sync(0)}
+</script></body></html>
