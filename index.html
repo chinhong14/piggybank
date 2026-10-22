@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Ledger</title>
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="theme-color" content="#0f6b5c"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Ledger">
 <style>
 :root{--bg:#f2f5f4;--card:#fff;--ink:#14211f;--mute:#667774;--line:#dce4e2;--sgd:#0f6b5c;--myr:#b7791f}
 @media(prefers-color-scheme:dark){:root{--bg:#0e1514;--card:#172120;--ink:#e8efed;--mute:#8fa09c;--line:#26332f;--sgd:#4fc3ad;--myr:#e6b04f}}
@@ -17,7 +18,7 @@ nav button.on{color:var(--ink);font-weight:700;box-shadow:inset 0 3px var(--ink)
 .SGD{--c:var(--sgd)}.MYR{--c:var(--myr)}
 .mnav{display:flex;align-items:center;justify-content:space-between;margin:4px 0 12px}
 .mnav h2{margin:0;font-size:20px}.mnav button{width:42px;height:42px;border:1px solid var(--line);background:var(--card);border-radius:50%;font-size:22px}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:start}.ccl{flex-wrap:wrap}.ccl label{flex:0 0 calc(33.3% - 4px)}
 .col,.card{background:var(--card);border-top:4px solid var(--c);border-radius:6px;overflow:hidden}
 .col header{display:flex;flex-direction:column;padding:10px 10px 8px;border-bottom:1px solid var(--line)}
 .col header b{font-size:13px;color:var(--c)}.col header span{font-size:22px;font-weight:700}
@@ -53,6 +54,9 @@ nav button{text-align:left;padding:12px 20px;flex:none;font-size:15px}nav button
 main{margin:0 auto 0 170px;max-width:900px;padding:24px 32px 100px}.fab{bottom:24px}}
 dialog{max-height:90vh;overflow:auto}#lk{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center}#lk[hidden]{display:none}
 #lk form{width:min(86vw,320px);display:grid;gap:12px;text-align:center}.btn.pri{padding:10px 16px}small.g{display:block;font-size:12px}.pos{color:var(--sgd)}.neg{color:#c0392b}
+[hidden]{display:none!important}
+.filters{display:grid;grid-template-columns:1fr 140px;gap:8px;margin-bottom:12px}.filters input,.filters select{margin:0}
+.chips{flex-wrap:wrap;gap:6px}.chips label{flex:0 0 auto}.chips span{padding:7px 13px;border-radius:20px;font-size:14px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}.row{padding:11px 10px}
 </style></head><body>
 <main id="m"></main>
 <nav><button data-v="exp">Expenses</button><button data-v="mon">Savings/<wbr>Invest</button><button data-v="rep">Reports</button><button data-v="rec">Recurring</button><button data-v="set">Settings</button></nav>
@@ -62,18 +66,27 @@ const $=s=>document.querySelector(s),K='ledger.v1';
 const DEF=['Food','Transport','Groceries','Rent','Bills','Subscription','Insurance','Shopping','Health','Charity','Fun','Other'];
 let S;try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
 S=S||{e:[],r:[],cats:[...DEF],cur:'SGD'};
-S.h=S.h||[];S.sv=S.sv||[];
+S.h=S.h||[];S.sv=S.sv||[];S.ccy=S.ccy||['SGD','MYR'];S.cmb=S.cmb||{on:0,base:'',rates:{}};
+const CL=['SGD','MYR','USD','AUD','THB','CNY','EUR','GBP','HKD','INR','NZD','PHP'];
+function ccs(){return[...new Set([...S.ccy,...S.e,...S.r,...S.h,...S.sv].map(x=>typeof x==='string'?x:x.cur).filter(Boolean))]}
+const cc=c=>['var(--sgd)','var(--myr)','#5b7fd1','#8e6bbf','#4aa96c','#d1604d'][Math.max(0,ccs().indexOf(c))%6];
 let KY={};try{KY=JSON.parse(localStorage.getItem('ledger.keys'))||{}}catch(e){}
 const saveKY=()=>{try{localStorage.setItem('ledger.keys',JSON.stringify(KY))}catch(e){}};
 const DR=`Insurance: insurance, takaful, aia, prudential, great eastern
-Subscription: subscription, subscribe, premium, netflix, youtube, spotify, disney, hbo, claude, chatgpt, openai, gemini, google one, google cloud, icloud, apple music, adobe, microsoft 365, office 365, dropbox, notion, canva, vpn, patreon, prime video
+Subscription: subscription, subscribe, premium, netflix, youtube, spotify, disney, hbo, claude, chatgpt, openai, gemini, google one, google cloud, icloud, apple music, adobe, microsoft 365, office 365, dropbox, notion, canva, vpn, patreon, prime video, grab unlimited, foodpanda pro, deliveroo plus, shopee vip, telegram premium
 Charity: charity, donation, donate, zakat, tithe, sedekah, church, temple
 Rent: rent, rental, sewa
 Bills: utilities, electric, internet, wifi, singtel, starhub, unifi, maxis, celcom, tnb`;
-if(!S.rules)S.rules=DR;
+const DR2=`Food: lunch, dinner, breakfast, brunch, restaurant, cafe, kopi, coffee, mcdonald, kfc, grab food, foodpanda, deliveroo
+Transport: mrt, bus fare, taxi, petrol, parking, toll, ez-link, grab, gojek, train ticket
+Groceries: supermarket, ntuc, fairprice, cold storage, giant, tesco, mydin, lotus, aeon
+Health: clinic, doctor, pharmacy, guardian, watsons, hospital, dental
+Fun: movie, cinema, concert, karaoke`;
+if(!S.rules){S.rules=DR+'\n'+DR2;S.rv=2}
+else if((S.rv||0)<2){const have=S.rules.split('\n').map(l=>l.split(':')[0].trim().toLowerCase());DR2.split('\n').forEach(l=>{if(!have.includes(l.split(':')[0].toLowerCase()))S.rules+='\n'+l});S.rv=2}
 const ensureCat=c=>{if(!S.cats.includes(c))S.cats.push(c);return c};
 const rulesP=()=>S.rules.split('\n').map(l=>{const i=l.indexOf(':');return i<1?null:[l.slice(0,i).trim(),l.slice(i+1).split(',').map(k=>k.trim().toLowerCase()).filter(Boolean)]}).filter(r=>r&&r[0]&&r[1].length);
-function classify(t){t=(t||'').toLowerCase();for(const[c,ks]of rulesP())for(const k of ks)if(new RegExp('(^|[^a-z0-9])'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(t))return c;return null}
+function classify(t){t=(t||'').toLowerCase();for(const[c,ks]of rulesP())for(const k of ks)if(new RegExp('(^|[^a-z0-9])'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(t))return c;for(const c of S.cats)if(c!=='Other'&&new RegExp('(^|[^a-z0-9])'+c.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(t))return c;return null}
 const resolve=(c,name)=>ensureCat(c||classify(name)||'Other');
 rulesP().forEach(r=>ensureCat(r[0]));
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){toast('Could not save. Storage is full or blocked in this browser.')}queueSync()};
@@ -84,7 +97,8 @@ const today=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+
 const fm=n=>n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const sum=l=>l.reduce((s,x)=>s+x.amt,0),live=()=>S.e.filter(x=>!x.del);
-const PAL=['#2a9d8f','#e9a23b','#5b7fd1','#d1604d','#8e6bbf','#4aa96c','#c2679b','#7a8a86'];
+const PAL=['#2a9d8f','#e9a23b','#5b7fd1','#d1604d','#8e6bbf','#4aa96c','#c2679b','#7a8a86','#d9822b','#3d8fb5','#a3b94a','#b5565f'];
+const kc=(k,i)=>{const j=S.cats.indexOf(k);return PAL[(j<0?i:j)%PAL.length]};
 let view='exp',cur=ym(today()),rmode='m';
 function shift(m,k){let[y,o]=m.split('-').map(Number);o+=k;while(o>12){o-=12;y++}while(o<1){o+=12;y--}return y+'-'+pad(o)}
 
@@ -98,25 +112,28 @@ function genRecurring(){const t=ym(today());let ch=false;
 
 function mnav(){const yr=view==='rep'&&rmode==='y';
  return `<div class=mnav><button data-act=prev aria-label="Previous">‹</button><h2>${yr?cur.slice(0,4):MN[+cur.slice(5)-1]+' '+cur.slice(0,4)}</h2><button data-act=next aria-label="Next">›</button></div>`}
-const row=x=>`<button class=row data-act=edit data-id="${x.id}"><i>${+x.date.slice(8)}</i><span>${esc(x.note||x.cat)}${x.auto?'<em>auto</em>':''}<small>${esc(x.cat)}</small></span><b>${fm(x.amt)}</b></button>`;
-function vExp(){
- const L=live().filter(x=>ym(x.date)===cur).sort((a,b)=>b.date.localeCompare(a.date)||b.u-a.u);
- const col=c=>{const l=L.filter(x=>x.cur===c);
-  return `<section class="col ${c}"><header><b>${c}</b><span>${fm(sum(l))}</span></header>${l.length?l.map(row).join(''):'<p class=empty>No spending yet</p>'}</section>`};
- return mnav()+`<div class=cols>${col('SGD')}${col('MYR')}</div><button class=fab data-act=add>+ Add expense</button>`}
+const row=x=>`<button class=row data-act=edit data-id="${x.id}"><i>${+x.date.slice(8)}</i><span>${esc(x.note||x.cat)}${x.auto?'<em>auto</em>':''}<small><u class=dot style="background:${kc(x.cat,0)}"></u>${esc(x.cat)}</small></span><b>${fm(x.amt)}</b></button>`;
+let qs='',fcat='';
+function xv(){let L=live().filter(x=>ym(x.date)===cur);const fl=qs||fcat;
+ if(fcat)L=L.filter(x=>x.cat===fcat);if(qs){const k=qs.toLowerCase();L=L.filter(x=>(x.note||'').toLowerCase().includes(k)||x.cat.toLowerCase().includes(k)||String(x.amt).includes(k))}
+ L.sort((a,b)=>b.date.localeCompare(a.date)||b.u-a.u);
+ const col=c=>{const l=L.filter(x=>x.cur===c);return `<section class=col style="--c:${cc(c)}"><header><b>${c}</b><span>${fm(sum(l))}</span></header>${l.length?l.map(row).join(''):`<p class=empty>${fl?'No matches':'No spending yet'}</p>`}</section>`};
+ return(fl?'<p class=mute style="margin:0 0 8px">Showing matches only, so totals cover just these.</p>':'')+cbox(L.map(x=>[x.amt,x.cur]),fl?'Combined (filtered)':'Combined spending')+`<div class=cols>${ccs().map(col).join('')}</div>`}
+function vExp(){const none=!S.e.some(x=>!x.del);
+ return mnav()+(none?'<div class=note style="margin-bottom:12px"><b>Welcome.</b> Tap <b>+ Add expense</b> to record your first one. Set your currencies, sorting rules and Drive backup in Settings.</div>':`<div class=filters><input id=q type=search placeholder="Search notes, categories, amounts" aria-label="Search" value="${esc(qs)}"><select id=fc aria-label="Filter by category"><option value="">All categories</option>${S.cats.map(c=>`<option ${c===fcat?'selected':''}>${esc(c)}</option>`).join('')}</select></div>`)+`<div id=xv>${xv()}</div><button class=fab data-act=add>+ Add expense</button>`}
 
 function donut(d,t){let o=25;return `<svg viewBox="0 0 42 42" class=donut role=img aria-label="Spending by category">`+
- d.map(([k,v],i)=>{const p=v/t*100,s=`<circle r=15.9155 cx=21 cy=21 fill=none stroke="${PAL[i%8]}" stroke-width=6 stroke-dasharray="${p} ${100-p}" stroke-dashoffset="${o}"/>`;o-=p;return s}).join('')+`</svg>`}
-const legend=(d,t)=>`<ul class=lg>${d.map(([k,v],i)=>`<li><i style="background:${PAL[i%8]}"></i><span>${esc(k)}</span><b>${fm(v)}</b><small>${Math.round(v/t*100)}%</small></li>`).join('')}</ul>`;
+ d.map(([k,v],i)=>{const p=v/t*100,s=`<circle r=15.9155 cx=21 cy=21 fill=none stroke="${kc(k,i)}" stroke-width=6 stroke-dasharray="${p} ${100-p}" stroke-dashoffset="${o}"/>`;o-=p;return s}).join('')+`</svg>`}
+const legend=(d,t)=>`<ul class=lg>${d.map(([k,v],i)=>`<li><i style="background:${kc(k,i)}"></i><span>${esc(k)}</span><b>${fm(v)}</b><small>${Math.round(v/t*100)}%</small></li>`).join('')}</ul>`;
 function bars(v,lab,color,step){const mx=Math.max(...v,0);
  return `<div class=bars>${v.map((x,i)=>`<div title="${lab[i]}: ${fm(x)}"><u style="height:${mx?x/mx*88:0}%;background:${color}"></u><small>${i%step===0?lab[i]:''}</small></div>`).join('')}</div>`}
 const cats=l=>{const m={};l.forEach(x=>m[x.cat]=(m[x.cat]||0)+x.amt);return Object.entries(m).sort((a,b)=>b[1]-a[1])};
-const colr=c=>c==='SGD'?'var(--sgd)':'var(--myr)';
+const colr=c=>cc(c);
 
 function repBlock(c){
  const y=cur.slice(0,4),isY=rmode==='y',A=live().filter(x=>x.cur===c);
  const l=A.filter(x=>isY?x.date.slice(0,4)===y:ym(x.date)===cur),t=sum(l);
- const head=`<section class="card ${c}"><h3>${c}</h3>`;
+ const head=`<section class=card style="--c:${cc(c)}"><h3>${c}</h3>`;
  if(!l.length)return head+`<p class=empty style="padding:0">No ${c} spending ${isY?'this year':'this month'}.</p></section>`;
  const d=cats(l);let extra='',trend='';
  if(isY){const mv=Array.from({length:12},(_,i)=>sum(A.filter(x=>ym(x.date)===y+'-'+pad(i+1))));
@@ -128,14 +145,16 @@ function repBlock(c){
   const dim=new Date(+y,+cur.slice(5),0).getDate();
   trend=bars(Array.from({length:dim},(_,i)=>sum(l.filter(x=>+x.date.slice(8)===i+1))),Array.from({length:dim},(_,i)=>i+1),colr(c),5)}
  return head+`<div class=big>${fm(t)}</div>${extra}<div class=rep>${donut(d,t)}${legend(d,t)}</div><div class=mute>${isY?'By month':'By day'}</div>${trend}</section>`}
-function vRep(){return `<div class=seg style="max-width:260px;margin-bottom:12px"><label><input type=radio name=rm data-act=rmode value=m ${rmode==='m'?'checked':''}><span>Month</span></label><label><input type=radio name=rm data-act=rmode value=y ${rmode==='y'?'checked':''}><span>Year</span></label></div>`+mnav()+repBlock('SGD')+repBlock('MYR')}
+function vRep(){return `<div class=seg style="max-width:260px;margin-bottom:12px"><label><input type=radio name=rm data-act=rmode value=m ${rmode==='m'?'checked':''}><span>Month</span></label><label><input type=radio name=rm data-act=rmode value=y ${rmode==='y'?'checked':''}><span>Year</span></label></div>`+mnav()+repAll()+ccs().map(repBlock).join('')}
 
 function vRec(){const R=S.r.filter(r=>!r.del);
  return `<h2 class=s style="margin-top:4px">Monthly repeated expenses</h2><p class=mute>Each one is added to Expenses on its day every month. Changes apply to future months only.</p>`+
- (R.length?R.map(r=>`<div class="rr ${r.cur}${r.paused?' off':''}"><button class=mid data-act=redit data-id="${r.id}">${esc(r.name)}<small>${r.cur} ${fm(r.amt)} on day ${r.day}, ${esc(r.cat)}${r.paused?' (paused)':''}</small></button><button class=btn data-act=rpause data-id="${r.id}">${r.paused?'Resume':'Pause'}</button></div>`).join(''):'<p class=empty>Nothing yet. Add your rent, donations and subscriptions.</p>')+
+ (R.length?R.map(r=>`<div class="rr${r.paused?' off':''}" style="--c:${cc(r.cur)}"><button class=mid data-act=redit data-id="${r.id}">${esc(r.name)}<small>${r.cur} ${fm(r.amt)} on day ${r.day}, ${esc(r.cat)}${r.paused?' (paused)':''}</small></button><button class=btn data-act=rpause data-id="${r.id}">${r.paused?'Resume':'Pause'}</button></div>`).join(''):'<p class=empty>Nothing yet. Add your rent, donations and subscriptions.</p>')+
  `<button class=fab data-act=radd>+ Add recurring</button>`}
 
-function vSet(){return `<h2 class=s style="margin-top:4px">Backup</h2><p class=mute>Your data lives only in this browser on this device. Export a backup regularly until Drive sync is added.</p>
+function vSet(){const used=new Set([...S.e,...S.r,...S.h,...S.sv].filter(x=>!x.del).map(x=>x.cur));
+ return `<h2 class=s style="margin-top:4px">Currencies</h2><p class=mute>Choose up to 4 currencies you use. Each gets its own column, report and net worth, and they are never mixed together. A currency that already has entries stays on until those entries are deleted.</p><div class="seg ccl">${[...new Set([...CL,...ccs()])].map(c=>`<label><input type=checkbox name=cc value=${c} ${S.ccy.includes(c)||used.has(c)?'checked':''} ${used.has(c)?'disabled':''}><span>${c}</span></label>`).join('')}</div><button class=btn data-act=savecc>Save currencies</button>
+${cmbUI()}<h2 class=s>Backup</h2><p class=mute>Your data lives only in this browser on this device. Export a backup regularly until Drive sync is added.</p>
 <div class=btns><button class=btn data-act=exp>Export backup (JSON)</button><button class=btn data-act=csv>Export CSV</button><label class=btn style="margin:0;color:var(--ink)">Import backup<input type=file accept=".json" id=imp hidden></label></div>
 <h2 class=s>Categories</h2><label>Separate with commas<textarea id=cats rows=3>${esc(S.cats.join(', '))}</textarea></label><button class=btn data-act=savecats>Save categories</button>
 <h2 class=s>Auto-sorting rules</h2><p class=mute>One rule per line as Category: keyword, keyword. The first matching rule wins. Used for recurring items and any expense set to Auto-detect.</p><label><textarea id=rules rows=8>${esc(S.rules)}</textarea></label><div class=btns><button class=btn data-act=saverules>Save rules</button><button class=btn data-act=resort>Re-sort entries filed as Other</button></div>
@@ -145,30 +164,44 @@ function vSet(){return `<h2 class=s style="margin-top:4px">Backup</h2><p class=m
 <h2 class=s>Coming next</h2><div class=note>The optional Gemini/Claude analysis switch.</div>
 <h2 class=s>Danger zone</h2><button class="btn del" style="margin:0" data-act=wipe>Erase all data on this device</button>`}
 
-function toast(t){let d=$('#toast');if(!d){d=document.createElement('div');d.id='toast';d.setAttribute('role','status');
- d.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:99;max-width:90vw';document.body.appendChild(d)}
- d.textContent=t;d.hidden=false;clearTimeout(d.t);d.t=setTimeout(()=>d.hidden=true,3500+t.length*50)}
+function toast(t,undo){let d=$('#toast');if(!d){d=document.createElement('div');d.id='toast';d.setAttribute('role','status');
+ d.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:130px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:99;max-width:90vw;display:flex;gap:12px;align-items:center';document.body.appendChild(d)}
+ d.textContent=t;d.hidden=false;if(undo){const b=document.createElement('button');b.textContent='Undo';b.style.cssText='background:none;border:1px solid currentColor;color:inherit;border-radius:6px;padding:4px 10px';b.onclick=()=>{undo();d.hidden=true};d.append(b)}
+ clearTimeout(d.t);d.t=setTimeout(()=>d.hidden=true,undo?6000:3500+t.length*50)}
+function del(x,w){x.del=1;x.u=now();save();render();toast(w+' deleted.',()=>{delete x.del;x.u=now();save();render()})}
 function openDlg(title,body,onSave,onDel){const f=$('#dlg form');let armed=0;
  f.innerHTML=`<h3>${title}</h3>${body}<div class=act>${onDel?'<button type=button class=del data-x=d>Delete</button>':''}<button type=button data-x=c>Cancel</button><button type=button class=pri data-x=s>Save</button></div>`;
  const go=()=>{if(!f.reportValidity())return;onSave(new FormData(f));$('#dlg').close()};
  f.onsubmit=e=>{e.preventDefault();go()};
  f.onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;const x=b.dataset.x;
   if(x==='c')$('#dlg').close();else if(x==='s')go();
-  else if(x==='d'){if(!armed){armed=1;b.textContent='Tap again to delete';return}onDel();$('#dlg').close()}};
+  else if(x==='d'){onDel();$('#dlg').close()}};
  $('#dlg').showModal()}
-const curSeg=v=>`<div class=seg>${['SGD','MYR'].map(c=>`<label><input type=radio name=cur value=${c} ${v===c?'checked':''}><span>${c}</span></label>`).join('')}</div>`;
+const curSeg=v=>{const cs=ccs();if(!cs.includes(v))v=cs[0];return `<div class=seg style="flex-wrap:wrap">${cs.map(c=>`<label><input type=radio name=cur value=${c} ${v===c?'checked':''}><span>${c}</span></label>`).join('')}</div>`};
 const catSel=v=>`<label>Category<select name=cat><option value="" ${v?'':'selected'}>Auto-detect from name</option>${(!v||S.cats.includes(v)?S.cats:[...S.cats,v]).map(c=>`<option ${c===v?'selected':''}>${esc(c)}</option>`).join('')}</select></label><div class=mute id=hint style="margin:-4px 0 10px"></div>`;
-function hint(){const f=$('#dlg form'),h=$('#hint'),n=f.elements.namedItem('note')||f.elements.namedItem('name'),c=f.elements.namedItem('cat');const u=()=>{h.textContent=c.value?'':'Will be filed as: '+(classify(n.value)||'Other')};f.oninput=u;u()}
+function hint(){const f=$('#dlg form'),h=$('#hint'),n=f.elements.namedItem('note')||f.elements.namedItem('name'),c=f.elements.namedItem('cat');const u=()=>{h.textContent=c.value?'':'Will be filed as: '+(classify(n.value)||'Other')};f.oninput=u;f.onchange=u;u()}
 
+const sh=n=>{const d=new Date();d.setDate(d.getDate()-n);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
 function expForm(id){const x=id?S.e.find(e=>e.id===id):{date:today(),cur:S.cur,cat:'',amt:'',note:''};
+ const past=live().filter(e=>!e.auto&&e.note).sort((a,b)=>b.u-a.u),notes=[...new Set(past.map(e=>e.note))].slice(0,40);
+ const chip=(v,t)=>`<label><input type=radio name=cat value="${esc(v)}" ${x.cat===v?'checked':''}><span>${esc(t)}</span></label>`;
+ const cl=x.cat&&!S.cats.includes(x.cat)?[...S.cats,x.cat]:S.cats;
  openDlg(id?'Edit expense':'Add expense',curSeg(x.cur)+
- `<label>Amount<input name=amt type=number step=0.01 min=0.01 inputmode=decimal required value="${x.amt}"></label>`+catSel(x.cat)+
- `<label>Date<input name=date type=date required value="${x.date}"></label><label>Note<input name=note maxlength=80 value="${esc(x.note)}"></label>`,
+ `<label>Amount<input name=amt type=number step=0.01 min=0.01 inputmode=decimal required autofocus value="${x.amt}"></label><label>Note<input name=note maxlength=80 list=nl autocomplete=off value="${esc(x.note)}"></label><datalist id=nl>${notes.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`+
+ `<div class=mute style="margin-bottom:4px">Category</div><div class="seg chips">${chip('','Auto')}${cl.map(c=>chip(c,c)).join('')}</div><div class=mute id=hint style="margin:0 0 10px"></div>`+
+ `<label>Date<input name=date type=date required value="${x.date}"></label><div class=btns style="margin:-4px 0 12px"><button type=button class=btn data-d=0>Today</button><button type=button class=btn data-d=1>Yesterday</button></div>`,
  f=>{const o={amt:+f.get('amt'),cur:f.get('cur'),cat:resolve(f.get('cat'),f.get('note')),date:f.get('date'),note:f.get('note').trim(),u:now()};
   if(!(o.amt>0))return;S.cur=o.cur;
   if(id)Object.assign(x,o);else S.e.push({id:uid(),...o});
   cur=ym(o.date);save();render()},
- id?()=>{x.del=1;x.u=now();save();render()}:null);hint()}
+ id?()=>del(x,'Expense'):null);
+ let sug='';const f=$('#dlg form'),pick=(n,v)=>{const r=[...f.querySelectorAll('input[name='+n+']')].find(i=>i.value===v);if(r)r.checked=true;return r};
+ f.addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;f.elements.date.value=sh(+b.dataset.d)});
+ f.elements.note.addEventListener('change',()=>{if(id)return;const m=past.find(e=>e.note.toLowerCase()===f.elements.note.value.trim().toLowerCase());if(!m)return;
+  if(!f.elements.amt.value)f.elements.amt.value=m.amt;if(!f.elements.cat.value){pick('cat',m.cat);sug=m.note.toLowerCase()}pick('cur',m.cur);hint()});
+ f.elements.note.addEventListener('input',()=>{if(sug&&f.elements.note.value.trim().toLowerCase()!==sug){pick('cat','');sug='';hint()}});
+ f.addEventListener('change',e=>{if(e.target.name==='cat')sug=''});
+ hint()}
 function recForm(id){const r=id?S.r.find(e=>e.id===id):{name:'',amt:'',cur:'SGD',cat:'',day:1};
  openDlg(id?'Edit recurring':'Add recurring',`<label>Name<input name=name required maxlength=50 value="${esc(r.name)}" placeholder="Rent, charity donation"></label>`+curSeg(r.cur)+
  `<label>Amount<input name=amt type=number step=0.01 min=0.01 inputmode=decimal required value="${r.amt}"></label>`+catSel(r.cat)+
@@ -177,7 +210,7 @@ function recForm(id){const r=id?S.r.find(e=>e.id===id):{name:'',amt:'',cur:'SGD'
   if(!(o.amt>0))return;
   if(id)Object.assign(r,o);else S.r.push({id:uid(),...o,start:ym(today()),paused:0});
   genRecurring();save();render()},
- id?()=>{r.del=1;r.u=now();save();render()}:null);hint()}
+ id?()=>del(r,'Recurring item'):null);hint()}
 
 function dl(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function merge(inc,q){let n=0;['e','r','h','sv'].forEach(k=>(inc[k]||[]).forEach(x=>{if(!x||!x.id)return;const m=S[k].find(y=>y.id===x.id);
@@ -190,16 +223,16 @@ const hv=h=>h.qty*(h.price||0),dstr=t=>new Date(t).toLocaleDateString();
 function vMon(){const T='<h2 class=s style="margin-top:4px">Savings/Investment</h2>';const H=S.h.filter(x=>!x.del),V=S.sv.filter(x=>!x.del);
  const blk=c=>{const hs=H.filter(x=>x.cur===c),vs=V.filter(x=>x.cur===c);if(!hs.length&&!vs.length)return '';
   const ht=hs.reduce((a,x)=>a+hv(x),0),st=sum(vs),t=ht+st,d=[...hs.map(x=>[x.name,hv(x)]),...vs.map(x=>[x.name,x.amt])].filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
-  const hr=x=>{const g=x.cost>0&&x.price?(x.price-x.cost)*x.qty:null;return `<button class=row data-act=hedit data-id="${x.id}"><i></i><span>${esc(x.name)}<small>${x.qty} x ${x.price?fm(x.price):'no price'}${x.upd?', '+dstr(x.upd):''}</small></span><b>${fm(hv(x))}${g===null?'':`<small class="g ${g>=0?'pos':'neg'}">${g>=0?'+':''}${fm(g)}</small>`}</b></button>`};
-  return `<section class="card ${c}"><h3>${c} net worth</h3><div class=big>${fm(t)}</div><div class=mute>Investments ${fm(ht)}, savings ${fm(st)}</div>${t>0?`<div class=rep>${donut(d,t)}${legend(d,t)}</div>`:''}${hs.map(hr).join('')}${vs.map(x=>`<button class=row data-act=sedit data-id="${x.id}"><i></i><span>${esc(x.name)}<small>Savings</small></span><b>${fm(x.amt)}</b></button>`).join('')}</section>`};
- return T+`<div class=btns style="margin-bottom:12px"><button class="btn pri" data-act=refresh>Refresh prices</button><button class=btn data-act=hadd>+ Holding</button><button class=btn data-act=sadd>+ Savings</button></div><p class=mute>Prices last refreshed: ${KY.last?new Date(KY.last).toLocaleString():'never'}</p>`+(blk('SGD')+blk('MYR')||'<p class=empty>Add your stocks, gold and bank savings to see your net worth.</p>')}
+  const hr=x=>{const g=x.cost>0&&x.price?(x.price-x.cost)*x.qty:null;return `<button class=row data-act=hedit data-id="${x.id}"><i></i><span>${esc(x.name)}<small>${{stock:'Stock',crypto:'Crypto',gold:'Gold',silver:'Silver',other:'Other'}[x.type]||'Holding'}, ${x.qty}${x.type==='gold'||x.type==='silver'?' g':''} x ${x.price?fm(x.price):'no price'}${x.upd?', '+dstr(x.upd):''}</small></span><b>${fm(hv(x))}${g===null?'':`<small class="g ${g>=0?'pos':'neg'}">${g>=0?'+':''}${fm(g)}</small>`}</b></button>`};
+  return `<section class=card style="--c:${cc(c)}"><h3>${c} net worth</h3><div class=big>${fm(t)}</div><div class=mute>Investments ${fm(ht)}, savings ${fm(st)}</div>${t>0?`<div class=rep>${donut(d,t)}${legend(d,t)}</div>`:''}${hs.map(hr).join('')}${vs.map(x=>`<button class=row data-act=sedit data-id="${x.id}"><i></i><span>${esc(x.name)}<small>Savings</small></span><b>${fm(x.amt)}</b></button>`).join('')}</section>`};
+ return T+`<div class=btns style="margin-bottom:12px"><button class="btn pri" data-act=refresh>Refresh prices</button><button class=btn data-act=hadd>+ Holding</button><button class=btn data-act=sadd>+ Savings</button></div><p class=mute>Prices last refreshed: ${KY.last?new Date(KY.last).toLocaleString():'never'}</p>`+cbox([...H.map(h=>[hv(h),h.cur]),...V.map(v=>[v.amt,v.cur])],'Combined net worth')+(ccs().map(blk).join('')||'<p class=empty>Add your stocks, gold and bank savings to see your net worth.</p>')}
 let lastT=0;
 async function td(sym,ex){const w=7600-(now()-lastT);if(w>0)await new Promise(r=>setTimeout(r,w));lastT=now();
  const r=await fetch('https://api.twelvedata.com/price?symbol='+encodeURIComponent(sym)+(ex?'&exchange='+encodeURIComponent(ex):'')+'&apikey='+encodeURIComponent(KY.td));const j=await r.json();if(!(+j.price>0))throw new Error(j.message||'no price');return +j.price}
 let busy=0;
 async function refresh(){if(!KY.td){toast('Add your Twelve Data key in Settings first.');return}if(busy)return;busy=1;
  const L=S.h.filter(x=>!x.del&&(x.sym||x.type==='gold'||x.type==='silver'));toast('Refreshing '+L.length+' holdings. The free plan allows about 8 requests a minute, so this can take a while.');
- const ca={},q=async(a,b)=>ca[a+b]??(ca[a+b]=await td(a,b)),fx=c=>q('USD/'+c),G=31.1035;let ok=0,bad=[];
+ const ca={},q=async(a,b)=>ca[a+b]??(ca[a+b]=await td(a,b)),fx=c=>c==='USD'?1:q('USD/'+c),G=31.1035;let ok=0,bad=[];
  for(const h of L){try{let p;
   if(h.type==='gold'||h.type==='silver')p=await q(h.type==='gold'?'XAU/USD':'XAG/USD')*await fx(h.cur)/G;
   else if(h.type==='crypto')p=await q(h.sym.includes('/')?h.sym:h.sym+'/USD')*await fx(h.cur);
@@ -207,16 +240,28 @@ async function refresh(){if(!KY.td){toast('Add your Twelve Data key in Settings 
   h.price=+p.toFixed(4);h.upd=now();h.u=now();ok++}catch(e){bad.push(h.name+' ['+String(e.message||e).slice(0,140)+']')}}
  busy=0;KY.last=now();saveKY();save();render();toast(ok+' updated'+(bad.length?'. Failed: '+bad.join('; ')+'. You can enter those prices by hand':'')+'.')}
 function autoRefresh(){const iv={daily:864e5,weekly:6048e5,monthly:2592e6}[KY.pf];if(iv&&KY.td&&now()-(KY.last||0)>iv)refresh()}
+const FT={stock:{q:'Number of shares or units',u:'share',s:1,x:1,d:1,h:'Fill in the stock symbol to refresh the price automatically or fill the price yourself.'},
+ crypto:{q:'Number of coins',u:'coin',s:1,h:'Enter the coin symbol, like BTC. The price refreshes automatically and is converted to your currency.'},
+ gold:{q:'Weight in grams',u:'gram',h:'Enter your weight in grams. The price per gram refreshes automatically, or you can type it.'},
+ silver:{q:'Weight in grams',u:'gram',h:'Enter your weight in grams. The price per gram refreshes automatically, or you can type it.'},
+ other:{q:'Quantity',u:'unit',h:'For anything without a live price, such as a unit trust. Type the price yourself and update it whenever you like.'}};
 function holdForm(id){const h=id?S.h.find(e=>e.id===id):{type:'stock',name:'',sym:'',ex:'',cur:'SGD',qty:'',cost:'',price:''};
- openDlg(id?'Edit holding':'Add holding',`<label>Type<select name=type>${[['stock','Stock or ETF'],['crypto','Crypto'],['gold','Gold (grams)'],['silver','Silver (grams)'],['other','Other']].map(([v,t])=>`<option value=${v} ${h.type===v?'selected':''}>${t}</option>`).join('')}</select></label><label>Name<input name=name required maxlength=40 value="${esc(h.name)}"></label>`+curSeg(h.cur)+
- `<label>Quantity (grams for gold and silver, coins for crypto)<input name=qty type=number step=any min=0 required value="${h.qty}"></label><label>Symbol (stocks and crypto)<input name=sym value="${esc(h.sym)}" placeholder="AAPL, or BTC for crypto"></label><label>Exchange (optional)<input name=ex value="${esc(h.ex)}" placeholder="SGX or XKLS"></label><label>Price quoted in<select name=usd><option value="">Same as holding currency</option><option value="1" ${h.usd==='1'?'selected':''}>US dollars (convert for me)</option></select></label><label>Average cost per unit (optional)<input name=cost type=number step=any min=0 value="${h.cost||''}"></label><label>Current price per unit (type it, or refresh)<input name=price type=number step=any min=0 value="${h.price||''}"></label>`,
- f=>{const o={type:f.get('type'),name:f.get('name').trim(),cur:f.get('cur'),qty:+f.get('qty'),sym:f.get('sym').trim(),ex:f.get('ex').trim(),usd:f.get('usd'),cost:+f.get('cost')||0,price:+f.get('price')||0,u:now()};
+ const op=(v,t)=>`<option value=${v} ${h.type===v?'selected':''}>${t}</option>`;
+ openDlg(id?'Edit holding':'Add holding',`<label>Type<select name=type>${op('stock','Stock or ETF')}${op('crypto','Crypto')}${op('gold','Gold')}${op('silver','Silver')}${op('other','Other')}</select></label><div class=mute id=th style="margin:-4px 0 10px"></div><label>Name<input name=name required maxlength=40 value="${esc(h.name)}"></label>`+curSeg(h.cur)+
+ `<label data-f=s><span data-l=sym>Symbol</span><input name=sym value="${esc(h.sym)}" autocapitalize=characters></label><label data-f=x>Exchange (optional)<input name=ex value="${esc(h.ex)}" placeholder="e.g. NASDAQ"></label><label><span data-l=q></span><input name=qty type=number step=any min=0 required value="${h.qty}"></label><label data-f=d>Price quoted in<select name=usd><option value="">Same as my currency</option><option value="1" ${h.usd==='1'?'selected':''}>US dollars (convert for me)</option></select></label><label><span data-l=c></span><input name=cost type=number step=any min=0 value="${h.cost||''}"></label><label><span data-l=p></span><input name=price type=number step=any min=0 value="${h.price||''}"></label>`,
+ f=>{const ty=f.get('type'),t=FT[ty];const o={type:ty,name:f.get('name').trim(),cur:f.get('cur'),qty:+f.get('qty'),sym:t.s?f.get('sym').trim():'',ex:t.x?f.get('ex').trim():'',usd:t.d?f.get('usd'):'',cost:+f.get('cost')||0,price:+f.get('price')||0,u:now()};
   if(o.price&&o.price!==h.price)o.upd=now();if(id)Object.assign(h,o);else S.h.push({id:uid(),...o});save();render()},
- id?()=>{h.del=1;h.u=now();save();render()}:null)}
+ id?()=>del(h,'Holding'):null);
+ const f=$('#dlg form'),sel=f.elements.namedItem('type');
+ const upd=()=>{const k=sel.value,t=FT[k],L=(n,v)=>f.querySelector('[data-l='+n+']').textContent=v;
+  f.querySelectorAll('[data-f]').forEach(e=>e.hidden=!t[e.dataset.f]);
+  L('q',t.q);L('c','Average cost per '+t.u+' (optional, to see gain or loss)');L('p','Current price per '+t.u+(k==='other'?'':' (Refresh fills this, or type it)'));
+  f.elements.namedItem('sym').placeholder=k==='crypto'?'e.g. BTC':'e.g. NVDA';$('#th').textContent=t.h};
+ sel.onchange=upd;upd()}
 function savForm(id){const v=id?S.sv.find(e=>e.id===id):{name:'',cur:'SGD',amt:''};
  openDlg(id?'Edit savings':'Add savings',`<label>Account name<input name=name required maxlength=40 value="${esc(v.name)}" placeholder="DBS savings, Maybank FD"></label>`+curSeg(v.cur)+`<label>Balance<input name=amt type=number step=0.01 min=0 required value="${v.amt}"></label>`,
  f=>{const o={name:f.get('name').trim(),cur:f.get('cur'),amt:+f.get('amt'),u:now()};if(id)Object.assign(v,o);else S.sv.push({id:uid(),...o});save();render()},
- id?()=>{v.del=1;v.u=now();save();render()}:null)}
+ id?()=>del(v,'Savings account'):null)}
 
 // ---- Google Drive sync (encrypted) ----
 let syncing=0,qt,tok=null,tokExp=0,gis;
@@ -248,8 +293,25 @@ async function sync(inter){if(!KY.sync||syncing)return;syncing=1;
   KY.syn=now();KY.err='';saveKY();st('Last synced '+new Date(KY.syn).toLocaleString());if(view!=='set')render()}
  catch(e){KY.err=e.message;saveKY();st('Sync problem: '+e.message);if(inter)toast('Sync problem: '+e.message)}
  syncing=0}
-const bn=()=>KY.sync&&!okTok()&&/^https?:$/.test(location.protocol)?'<div class=note style="margin-bottom:12px">Drive sync is waiting for sign-in. <button class=btn data-act=sync>Sync now</button></div>':'';
+const bn=()=>{if(!KY.sync||!/^https?:$/.test(location.protocol))return '';if(!okTok())return '<div class=note style="margin-bottom:12px">Drive sync is waiting for sign-in. <button class=btn data-act=sync>Sync now</button></div>';return KY.syn?'<div class=mute style="text-align:right;font-size:12px;margin:-2px 0 6px"><span style="color:var(--sgd)">&#9679;</span> Backed up '+new Date(KY.syn).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</div>':''};
 
+// ---- Optional combined total ----
+function toBase(a,c){const m=S.cmb;if(c===m.base)return a;const r=+m.rates[c];return r>0?a*r:null}
+function cbox(items,label){const m=S.cmb;if(!m.on||!m.base)return '';const miss=new Set();let t=0;
+ items.forEach(([a,c])=>{const v=toBase(a,c);if(v===null)miss.add(c);else t+=v});
+ return `<section class=card style="--c:var(--ink)"><h3>${label}</h3><div class=big>${m.base} ${fm(t)}</div><div class=mute>${miss.size?'Missing rate for '+[...miss].join(', ')+'. Set it in Settings. Those amounts are left out.':'Estimate using your saved rates'+(m.ts?' ('+dstr(m.ts)+')':'')+'.'}</div></section>`}
+function repAll(){const m=S.cmb;if(!m.on||!m.base)return '';const y=cur.slice(0,4),isY=rmode==='y',A=live();
+ const inP=(x,p)=>isY?x.date.slice(0,4)===p:ym(x.date)===p;
+ const conv=l=>{let t=0,miss=new Set(),cm={};l.forEach(x=>{const v=toBase(x.amt,x.cur);if(v===null){miss.add(x.cur);return}t+=v;cm[x.cat]=(cm[x.cat]||0)+v});return{t,miss,cm}};
+ const c=conv(A.filter(x=>inP(x,isY?y:cur)));if(!c.t&&!c.miss.size)return '';
+ const pv=conv(A.filter(x=>inP(x,isY?String(+y-1):shift(cur,-1)))).t,d=Object.entries(c.cm).sort((a,b)=>b[1]-a[1]);
+ return `<section class=card style="--c:var(--ink)"><h3>Combined in ${m.base}</h3><div class=big>${fm(c.t)}</div><div class=mute>${pv?(c.t>=pv?'+':'')+((c.t-pv)/pv*100).toFixed(0)+'% vs '+(isY?'last year':'last month'):'Estimate using your saved rates'}${c.miss.size?'. Missing rate for '+[...c.miss].join(', '):''}</div>${c.t>0?`<div class=rep>${donut(d,c.t)}${legend(d,c.t)}</div>`:''}</section>`}
+function cmbUI(){const m=S.cmb,cs=ccs(),bs=cs.includes(m.base)?m.base:cs[0];
+ return `<h2 class=s>Combined total (optional)</h2><p class=mute>Adds one estimated total across your currencies, shown beside the separate ones. It uses the rates below for all months, so treat it as an estimate. Rates stay on this device.</p><label>Show combined totals<select id=cbon><option value=0>Off</option><option value=1 ${m.on?'selected':''}>On</option></select></label><label>Main currency<select id=cbb>${cs.map(c=>`<option ${c===bs?'selected':''}>${c}</option>`).join('')}</select></label>${cs.filter(c=>c!==bs).map(c=>`<label>1 ${c} equals how many ${bs}?<input data-rate=${c} type=number step=any min=0 value="${m.rates[c]||''}"></label>`).join('')}<div class=btns><button class=btn data-act=savecmb>Save combined settings</button><button class=btn data-act=getrates>Get rates from Twelve Data</button></div><p class=mute>${m.ts?'Rates saved '+dstr(m.ts):'No rates saved yet'}</p>`}
+function readCmb(){const m=S.cmb;m.on=+$('#cbon').value;m.base=$('#cbb').value;document.querySelectorAll('[data-rate]').forEach(i=>{const v=+i.value;if(v>0)m.rates[i.dataset.rate]=v;else delete m.rates[i.dataset.rate]})}
+async function getRates(){if(!KY.td){toast('Add your Twelve Data key in Settings first.');return}if(busy)return;readCmb();busy=1;const m=S.cmb,bad=[];toast('Getting rates...');
+ for(const c of ccs().filter(x=>x!==m.base)){try{m.rates[c]=+(await td(c+'/'+m.base)).toFixed(6)}catch(e){bad.push(c+' ['+String(e.message||e).slice(0,80)+']')}}
+ busy=0;m.ts=now();save();render();toast(bad.length?'Could not get: '+bad.join('; ')+'. Type those rates yourself.':'Rates updated.')}
 // ---- App lock ----
 let locked=false,hidAt=0;
 async function hp(pin,salt){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveBits']);const b=await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},k,256);return btoa(String.fromCharCode(...new Uint8Array(b)))}
@@ -281,11 +343,17 @@ document.addEventListener('click',e=>{
  else if(a==='sync')sync(1);
  else if(a==='svsave'){const c=$('#cid').value.trim(),w=$('#pw').value;if(!c||w.length<8){toast('Enter the client ID and a passphrase of 8 or more characters.');return}KY.cid=c;KY.pw=w;KY.sync=1;saveKY();loadGIS().catch(()=>{});render();toast('Saved. Tap Sync now to sign in to Google.')}
  else if(a==='svoff'){KY.sync=0;saveKY();render();toast('Drive sync turned off. Your Drive copy is untouched.')}
+ else if(a==='savecc'){const c=[...document.querySelectorAll('.ccl input:checked')].map(i=>i.value);if(c.length<1||c.length>4){toast('Choose between 1 and 4 currencies.');return}S.ccy=[...S.ccy.filter(x=>c.includes(x)),...c.filter(x=>!S.ccy.includes(x))];if(!S.ccy.length)S.ccy=c;save();render();toast('Currencies saved.')}
+ else if(a==='savecmb'){readCmb();S.cmb.ts=now();save();render();toast('Combined settings saved.')}
+ else if(a==='getrates')getRates();
  else if(a==='saverules'){S.rules=$('#rules').value;rulesP().forEach(r=>ensureCat(r[0]));save();toast('Rules saved.')}
  else if(a==='resort'){let n=0;[...S.e.filter(x=>!x.del),...S.r.filter(x=>!x.del)].forEach(x=>{if(x.cat!=='Other')return;const c=classify(x.note||x.name);if(c){x.cat=ensureCat(c);x.u=now();n++}});save();render();toast(n+' entries re-sorted.')}
  else if(a==='savecats'){const c=[...new Set($('#cats').value.split(',').map(s=>s.trim()).filter(Boolean))];if(c.length){S.cats=c;save();toast('Categories saved.')}}
- else if(a==='wipe'){if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Tap again to erase everything';return}S={e:[],r:[],h:[],sv:[],cats:[...DEF],cur:'SGD',rules:DR};save();render();toast('All data erased.')}});
+ else if(a==='wipe'){if(!b.dataset.arm){b.dataset.arm=1;b.textContent='Tap again to erase everything';return}S={e:[],r:[],h:[],sv:[],ccy:['SGD','MYR'],cmb:{on:0,base:'',rates:{}},cats:[...DEF],cur:'SGD',rules:DR+'\n'+DR2,rv:2};save();render();toast('All data erased.')}});
+document.addEventListener('input',e=>{if(e.target.id==='q'){qs=e.target.value.trim();$('#xv').innerHTML=xv()}});
+document.addEventListener('change',e=>{if(e.target.id==='fc'){fcat=e.target.value;$('#xv').innerHTML=xv()}if(e.target.id==='cbb'){S.cmb.base=e.target.value;S.cmb.rates={};S.cmb.on=+$('#cbon').value;save();render()}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){hidAt=now();sync(0);return}if(KY.lock&&now()-hidAt>6e4)lock();else{genRecurring();render();autoRefresh();sync(0)}});
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 genRecurring();if(KY.sync)loadGIS().catch(()=>{});if(KY.lock)lock();else{render();autoRefresh();sync(0)}
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script></body></html>
